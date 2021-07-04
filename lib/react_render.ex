@@ -88,6 +88,30 @@ defmodule ReactRender do
     end
   end
 
+  def render_with_state(component_path, props \\ %{}) do
+    case do_get_html(component_path, props) do
+      {:error, %{message: message, stack: stack}} ->
+        raise ReactRender.RenderError, message: message, stack: stack
+
+      {:ok, %{"markup" => markup, "component" => component} = resp} ->
+        props =
+          props
+          |> Jason.encode!()
+          |> String.replace("\"", "&quot;")
+
+        html =
+          """
+          <div data-rendered data-component="#{component}" data-props="#{props}">
+          #{markup}
+          </div>
+          """
+          |> String.replace("\n", "")
+
+        {:safe, html, resp["state"] || %{}}
+    end
+  end
+
+
   defp do_get_html(component_path, props) do
     task =
       Task.async(fn ->
